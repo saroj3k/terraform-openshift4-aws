@@ -1,6 +1,6 @@
 variable "openshift_pull_secret" {
-  type        = string
-  default     = "./openshift_pull_secret.json"
+  type    = string
+  default = "./openshift_pull_secret.json"
 }
 
 variable "openshift_installer_url" {
@@ -14,6 +14,8 @@ EOF
   default     = "https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest"
 }
 
+/* these values will be provided by the environment; however, it needs to be passed in as a AWS secret is created */
+
 variable "aws_access_key_id" {
   type        = string
   description = "AWS access key"
@@ -23,6 +25,7 @@ variable "aws_secret_access_key" {
   type        = string
   description = "AWS Secret"
 }
+
 
 terraform {
   required_version = ">= 0.12"
@@ -35,7 +38,7 @@ variable "machine_cidr" {
 The IP address space from which to assign machine IPs.
 Default "10.0.0.0/16"
 EOF
-  default = "10.0.0.0/16"
+  default     = "10.0.0.0/16"
 }
 
 variable "base_domain" {
@@ -78,8 +81,8 @@ EOF
 }
 
 variable "use_ipv4" {
-  type = bool
-  default = true
+  type        = bool
+  default     = true
   description = <<EOF
 Should the cluster be created with ipv4 networking. (default = true)
 EOF
@@ -87,8 +90,8 @@ EOF
 }
 
 variable "use_ipv6" {
-  type = bool
-  default = false
+  type        = bool
+  default     = false
   description = <<EOF
 Should the cluster be created with ipv6 networking. (default = false)
 EOF

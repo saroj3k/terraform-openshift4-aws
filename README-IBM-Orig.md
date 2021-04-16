@@ -1,9 +1,6 @@
 # Automated OpenShift v4 installation on AWS
 
 This project automates the Red Hat OpenShift Container Platform 4.x installation on Amazon AWS platform. It focuses on the OpenShift User-provided infrastructure installation (UPI) where implementers provide pre-existing infrastructure including VMs, networking, load balancers, DNS configuration etc.
-However, the scripts have some sane default values and have been able to stand up a Openshift 4.x cluster (validated against 4.7.x) given a _Hosted Zone_.
-
-The core of the scripts are from the [IBM Cloud Repos for Openshift-Terraform](https://github.com/ibm-cloud-architecture/terraform-openshift4-aws). The users are encouraged to refer to the [Redhat Installation for Openshift 4.x](https://docs.openshift.com/container-platform/4.7/installing/installing_aws/installing-restricted-networks-aws.html#logging-in-by-using-the-web-console_installing-restricted-networks-aws), and their accompanying [Openshift 4.x Cloud Formation template](https://github.com/openshift/installer/blob/master/docs/user/aws/install_upi.md), which is essentially the basis for the _Terraform_ equivalent. This file reflects the configuration that has been validated. The original Readme is located [here](./README-IBM-Orig.md)
 
 * [Terraform Automation](#terraform-automation)
 * [Infrastructure Architecture](#infrastructure-architecture)
@@ -15,11 +12,10 @@ The core of the scripts are from the [IBM Cloud Repos for Openshift-Terraform](h
 ## Terraform Automation
 
 This project uses mainly Terraform as infrastructure management and installation automation driver. All the user provisioned resource are created via the terraform scripts in this project.
-Minimal requirement: a user provided _Hosted Zone_ for a _Web Domain_ it owns, in order for the _Openshift_ installation to create _Address_ (A) records for the _subdomains_.
 
 ### Prerequisites
 
-1. To use Terraform automation, download the Terraform binaries [here](https://www.terraform.io/). The code here requires Terraform 0.12+, and has been tested with v0.14+;
+1. To use Terraform automation, download the Terraform binaries [here](https://www.terraform.io/). The code here supports Terraform 0.12 - 0.12.13; there are warning messages to run this on 0.12.14 and later.
 
    On MacOS, you can acquire it using [homebrew](brew.sh) using this command:
 
@@ -27,7 +23,7 @@ Minimal requirement: a user provided _Hosted Zone_ for a _Web Domain_ it owns, i
    brew install terraform
    ```
 
-2. Install git, or install _VS Code_ or _IntelliJ_ that has embedded support for _git_.
+2. Install git
 
    ```bash
    sudo yum intall git-all
@@ -73,15 +69,14 @@ Minimal requirement: a user provided _Hosted Zone_ for a _Web Domain_ it owns, i
 
    Please reference the [Required AWS Infrastructure components](https://docs.openshift.com/container-platform/4.1/installing/installing_aws_user_infra/installing-aws-user-infra.html#installation-aws-user-infra-requirements_installing-aws-user-infra) to setup your AWS account before installing OpenShift 4.
 
->   We suggest to create an AWS IAM user dedicated for OpenShift installation with permissions documented above.
->   On the bastion host, configure your AWS user credential as environment variables:
+   We suggest to create an AWS IAM user dedicated for OpenShift installation with permissions documented above.
+   On the bastion host, configure your AWS user credential as environment variables:
 
     ```bash
     export AWS_ACCESS_KEY_ID=RKXXXXXXXXXXXXXXX
     export AWS_SECRET_ACCESS_KEY=LXXXXXXXXXXXXXXXXXX/ng
     export AWS_DEFAULT_REGION=us-east-2
     ```
-> Alternatively, configure using a named profile `aws configure <profile>`
 
 ## Infrastructure Architecture
 
@@ -93,13 +88,10 @@ For detail on OpenShift UPI, please reference the following:
 The terraform code in this repository supports 3 installation modes:
 
 - External facing cluster in a private network: ![External Open](img/openshift_aws_external.png)
-> This installation has been validated for Openshift 4.7.6
 
 - Internal cluster with internet access: ![Internal](img/openshift_aws_internal.png)
-> Please refer to the original [README](./README-IBM-Orig.md) for installation details.
 
 - Airgapped cluster with no access: ![Airgapped](img/openshift_aws_airgapped.png)
-> Please refer to the original [README](./README-IBM-Orig.md) for installation details.
 
 There are other installation modes that are possible with this terraform set, but we have not tested all the possible combinations, see [Advanced usage](#advanced-topics)
 
@@ -122,9 +114,32 @@ This project installs the OpenShift 4 in several stages where each stage automat
 	- bootstrap: main module to provision the bootstrap node and generates OpenShift installation files and resources
 	- master: create master nodes manually (UPI)
 
-> Alternatively, provision the cluster by providing the values in [terraform.tfvars](./terraform.tfvars)
+	You can also provision all the components in a single terraform main module, to do that, you need to use a terraform.tfvars, that is copied from the terraform.tfvars.example file. The variables related to that are:
 
-Note: the following table should serve as useful guidance
+	Create a `terraform.tfvars` file with following content:
+
+```
+cluster_id = "ocp4-9n2nn"
+clustername = "ocp4"
+base_domain = "example.com"
+openshift_pull_secret = "./openshift_pull_secret.json"
+openshift_installer_url = "https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest"
+
+aws_access_key_id = "AAAA"
+aws_secret_access_key = "AbcDefGhiJkl"
+aws_ami = "ami-06f85a7940faa3217"
+aws_extra_tags = {
+  "kubernetes.io/cluster/ocp4-9n2nn" = "owned",
+  "owner" = "admin"
+  }
+aws_azs = [
+  "us-east-1a",
+  "us-east-1b",
+  "us-east-1c"
+  ]
+aws_region = "us-east-1"
+aws_publish_strategy = "External"
+```
 
 |name | required  | description and value        |
 |----------------|------------|--------------|
@@ -152,7 +167,7 @@ Initialize the Terraform:
 ```bash
 terraform init
 ```
-> Note: 1. `terraform` versions later than v0.12 may require newer _elements, structure and providers_. 2. `Openshift 4.6+` require `ignition v3.x` which is not officially available from _Terraform_ nd therefore, a community build may need to be employed
+> Note: 1. `terraform` versions later than v0.12 may require newer structure and providers. 2. `Openshift 4.6+` require `ignition v3.x` requiring access to community providers
 
 Run the terraform provisioning:
 
@@ -180,39 +195,6 @@ ln -s <path of this folder>/install/kubectl kubectl
 oc version (to validate the availability of the command in the environment)
 kubectl version (to validate the availability of the command in the environment)
 ```
-## Validate Installation
-The `oc` CLI (and web console) should be the recommended mechanism to access an Openshift cluster including the installation in AWS
-
-> Log on to the Openshift Cluster using `kubeadmin` account is not recommended in PROD, and should be removed once installation is complete.
-> Further, accessing the cluster _nodes_ using `ssh` is also discouraged, as it flags the nodes as tainted.
->_Operators_ are the recommended mechanism to affect any changes and ensure immutability.
-
-The following is an excerpt from the [Validating an installation](https://docs.openshift.com/container-platform/4.7/installing/validating-an-installation.html#validating-an-installation)
-
-**Log on**
-```
-oc login https://api.ocp4.kongoda.com:6443 -u kubeadmin -p <kubeadmin-password file content>
-```
-**Get Lay of the land**
-```
-oc get nodes
-```
-**Resource usage**
-```
-oc adm top nodes
-```
-**Explore Namespaces**
-```
-oc projects
-oc project <namespace>
-```
-**Get address for web console as alternative to `oc`**
-```
-oc routes
-oc get routes -n openshift-console | grep 'console-openshift'
-```
-**Access the _web console_ from the browser
-A sample screenshot is given below ![Openshift WebConsole](img/openshift_4.7.6_Web_console.png)
 
 ### Removing bootstrap node
  
@@ -224,7 +206,82 @@ terraform destroy -target=module.bootstrap.aws_instance.bootstrap -var "aws_acce
 
 ## Airgapped Installation
 
-This has not been validated, and please refer to the [Original Readme](./README-IBM-Orig.md) for installation instruction.
+For performing a completely airgapped cluster, there are two capabilities that would not be available from the cluster's automation capabilities, the IAM and Route53 management access. The airgapped solution can address this by pre-creating the roles and secret that are needed for OpenShift to complete its functions, but the DNS update on Route53 must be performed manually after the installation.
+
+Setting up the mirror repository using AWS ECR:
+
+1. Create the repository
+
+    ```
+    aws ecr create-repository --repository-name ocp435
+    ```
+
+2. Prepare your credential to access the ECR repository (ie the credential only valid for 12 hrs)
+
+    ```
+    aws ecr get-login
+    ```
+
+    Extract the password token (`-p` argument) and create a Base64 string:
+
+    ```
+    echo "AWS:<token>" | base64 -w0
+    ```
+
+    Put that into your pull secret:
+
+    ```
+    {"353456611220.dkr.ecr.us-east-1.amazonaws.com":{"auth":"<base64string>","email":"abc@example.com"}}
+    ```
+
+3. Mirror quay.io and other OpenShift source into your repository
+
+    ```
+    export OCP_RELEASE="4.3.5-x86_64"
+    export LOCAL_REGISTRY='1234567812345678.dkr.ecr.us-east-1.amazonaws.com'
+    export LOCAL_REPOSITORY='ocp435'
+    export PRODUCT_REPO='openshift-release-dev'
+    export LOCAL_SECRET_JSON='/home/ec2-user/openshift_pull_secret.json'
+    export RELEASE_NAME="ocp-release"
+
+    oc adm -a ${LOCAL_SECRET_JSON} release mirror --max-per-registry=1 \
+       --from=quay.io/${PRODUCT_REPO}/${RELEASE_NAME}:${OCP_RELEASE} \
+       --to=${LOCAL_REGISTRY}/${LOCAL_REPOSITORY} \
+       --to-release-image=${LOCAL_REGISTRY}/${LOCAL_REPOSITORY}:${OCP_RELEASE}
+    ```
+
+Once the mirror registry is created - use the terraform.tfvars similar to below:
+
+```
+cluster_id = "ocp4-9n2nn"
+clustername = "ocp4"
+base_domain = "example.com"
+openshift_pull_secret = "./openshift_pull_secret.json"
+openshift_installer_url = "https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest"
+
+aws_access_key_id = "AAAA"
+aws_secret_access_key = "AbcDefGhiJkl"
+aws_ami = "ami-06f85a7940faa3217"
+aws_extra_tags = {
+  "kubernetes.io/cluster/ocp4-9n2nn" = "owned",
+  "owner" = "admin"
+  }
+aws_azs = [
+  "us-east-1a",
+  "us-east-1b",
+  "us-east-1c"
+  ]
+aws_region = "us-east-1"
+aws_publish_strategy = "Internal"
+airgapped = {
+  enabled = true
+  repository = "1234567812345678.dkr.ecr.us-east-1.amazonaws.com/ocp435"
+}
+```
+
+**Note**: To use `airgapped.enabled` of `true` must be done with `aws_publish_strategy` of `Internal` otherwise the deployment will fail.
+
+Create your cluster and then associate the private Hosted Zone Record in Route53 with the loadbalancer for the `*.apps.<cluster>.<domain>`.  
 
 ## Removal Procedure
 
@@ -234,7 +291,7 @@ Some of these resources also hamper the ability to run `terraform destroy` as it
 The cluster created resources are:
 
 - Resources that prevents `terraform destroy` to be completed:
-  - Worker EC2 instances
+  - Worker EC2 instances (**o be safe, _stop and terminate_ the EC2 instances from the AWS console prior to executng `terraform destroy`**
   - Application Load Balancer (classic load balancer) for the `*.apps.<cluster>.<domain>`
   - Security Group for the application load balancer
 - Other resources that are not deleted:
@@ -242,15 +299,13 @@ The cluster created resources are:
   - IAM users for the cluster
   - Public Route53 Record set associated with the application load balancer
 
-> Therefore, it's advisable to terminate the EC2 instances and a few other network infrastructure using AWS console before executing the _Terraform Destroy_
 ```
 terraform destroy -var "aws_access_key_id=$AWS_ACCESS_KEY_ID" -var "aws_secret_access_key=$AWS_SECRET_ACCESS_KEY" -var "aws_profile=$AWS_PROFILE"
 ```
-> Optionally, run the following utility script to confirm the removal of all the resources; otherwise, rerun the `terraform destroy`
+> Additionally, run the following utility script to confirm all the resources did get deleted; otherwise, rerun the `terraform destroy`
 ```
 ./list-vpc.sh
 ```
-
 ## Advanced topics
 
 Additional configurations and customization of the implementation can be performed by changing some of the default variables.

@@ -1,3 +1,17 @@
+#sarp: added following section to align with terraform v0.14.x
+terraform {
+  required_version = ">= 0.13"
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 3.24"
+    }
+    ignition = {
+      source = "community-terraform-providers/ignition"
+      version = "2.1.2"
+    }
+  }
+}
 locals {
   public_endpoints = var.publish_strategy == "External" ? true : false
 }

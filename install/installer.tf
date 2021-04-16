@@ -54,6 +54,7 @@ EOF
   }
 }
 
+/* sarp - changed profile from default to one passed in the variable */
 resource "null_resource" "aws_credentials" {
   provisioner "local-exec" {
     command = "mkdir -p ~/.aws"
@@ -66,7 +67,7 @@ resource "null_resource" "aws_credentials" {
 
 data "template_file" "aws_credentials" {
   template = <<-EOF
-[default]
+[${var.aws_profile}]
 aws_access_key_id = ${var.aws_access_key_id}
 aws_secret_access_key = ${var.aws_secret_access_key}
 EOF

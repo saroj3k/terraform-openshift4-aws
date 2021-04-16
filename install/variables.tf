@@ -81,6 +81,7 @@ variable "openshift_installer_url" {
   default     = "https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest"
 }
 
+/* these values will be provided by the environment; however, it needs to be passed in as a AWS secret is created */
 variable "aws_access_key_id" {
   type        = string
   description = "AWS access key"
@@ -89,6 +90,12 @@ variable "aws_access_key_id" {
 variable "aws_secret_access_key" {
   type        = string
   description = "AWS Secret"
+}
+
+# sarp: aws profile
+variable "aws_profile" {
+  type        = string
+  description = "AWS profile"
 }
 
 variable "aws_region" {
