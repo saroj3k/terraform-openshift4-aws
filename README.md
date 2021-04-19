@@ -60,8 +60,8 @@ Minimal requirement: a user provided _Hosted Zone_ for a _Web Domain_ it owns, i
 
 4. Get the Terraform code
 
-   ```bash
-   git clone https://github.com/ibm-cloud-architecture/terraform-openshift4-aws.git
+   ```
+   git clone https://gitlab.guardrailz.com/saroj3k/openshift.git
    ```
 
 5. Prepare the DNS
@@ -73,15 +73,16 @@ Minimal requirement: a user provided _Hosted Zone_ for a _Web Domain_ it owns, i
 
    Please reference the [Required AWS Infrastructure components](https://docs.openshift.com/container-platform/4.1/installing/installing_aws_user_infra/installing-aws-user-infra.html#installation-aws-user-infra-requirements_installing-aws-user-infra) to setup your AWS account before installing OpenShift 4.
 
->   We suggest to create an AWS IAM user dedicated for OpenShift installation with permissions documented above.
->   On the bastion host, configure your AWS user credential as environment variables:
-
-    ```bash
+    ```
     export AWS_ACCESS_KEY_ID=RKXXXXXXXXXXXXXXX
     export AWS_SECRET_ACCESS_KEY=LXXXXXXXXXXXXXXXXXX/ng
     export AWS_DEFAULT_REGION=us-east-2
     ```
-> Alternatively, configure using a named profile `aws configure <profile>`
+
+
+>   We suggest to create an AWS IAM user dedicated for OpenShift installation with permissions documented above.
+>   On the bastion host, configure your AWS user credential as environment variables:
+>   Alternatively, configure using a named profile `aws configure <profile>`
 
 ## Infrastructure Architecture
 
@@ -211,20 +212,16 @@ oc project <namespace>
 oc routes
 oc get routes -n openshift-console | grep 'console-openshift'
 ```
-**Access the _web console_ from the browser
+**Access the _web console_ from the browser**
 A sample screenshot is given below ![Openshift WebConsole](img/openshift_4.7.6_Web_console.png)
 
 ### Removing bootstrap node
- 
-Once the cluster is installed, the bootstrap node is no longer used at all. One of the indication that the bootstrap has been completed is that the API load balancer target group shows that the bootstrap address is `unhealthy`. 
+
+Once the cluster is installed, the bootstrap node is no longer used at all. One of the indication that the bootstrap has been completed is that the API load balancer target group shows that the bootstrap address is `unhealthy`.
 
 ```
 terraform destroy -target=module.bootstrap.aws_instance.bootstrap -var "aws_access_key_id=$AWS_ACCESS_KEY_ID" -var "aws_secret_access_key=$AWS_SECRET_ACCESS_KEY" -var "aws_profile=$AWS_PROFILE"
 ```
-
-## Airgapped Installation
-
-This has not been validated, and please refer to the [Original Readme](./README-IBM-Orig.md) for installation instruction.
 
 ## Removal Procedure
 
@@ -248,8 +245,16 @@ terraform destroy -var "aws_access_key_id=$AWS_ACCESS_KEY_ID" -var "aws_secret_a
 ```
 > Optionally, run the following utility script to confirm the removal of all the resources; otherwise, rerun the `terraform destroy`
 ```
-./list-vpc.sh
+./list-vpc.sh <vpc id or a nonce> <aws profile>
 ```
+
+## Cost
+
+Now, the inevitable question: How much will it cost me? Per experience, the total cost for the cluster will be roughly 2-3 USD/hour (~= 0.35 dollar/t2 or i3 instance/hour)
+
+## Airgapped Installation
+
+This has not been validated, and please refer to the [Original Readme](./README-IBM-Orig.md) for installation instruction.
 
 ## Advanced topics
 
